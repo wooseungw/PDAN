@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+export CUDA_VISIBLE_DEVICES=0
 export PATH=/Your/ENV/bin:$PATH
 
 python train_PDAN.py \
