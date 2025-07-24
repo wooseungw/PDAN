@@ -1,123 +1,86 @@
 #!/bin/bash
 
-# PyTorch Lightning PDAN Training Scripts
-# Various training configurations and examples
+# P# Default configuration
+STAGE=1
+BLOCK=5
+NUM_CHANNEL=512
+INPUT_CHANNEL=1024
+NUM_CLASSES=157
+BATCH_SIZE=4  # 1에서 4로 증가
+LEARNING_RATE=0.001
+WEIGHT_DECAY=1e-4
+NUM_WORKERS=8  # 워커 수 증가
+MAX_EPOCHS=100
+GPUS=2
+PRECISION=32 Training Script
+# Usage: ./run_lightning_training.sh
 
-echo "=== PyTorch Lightning PDAN Training ==="
+set -e  # Exit on any error
 
-# Basic RGB training
-echo "1. Basic RGB Training..."
+echo "Starting PDAN Training with PyTorch Lightning..."
+
+# Set CUDA environment variables for compatibility
+export TORCH_USE_CUDA_DSA=1
+export CUDA_LAUNCH_BLOCKING=1
+
+# Disable CUDNN optimizations to avoid compatibility issues
+export CUDNN_DETERMINISTIC=1
+
+# Default configuration
+STAGE=1
+BLOCK=5
+NUM_CHANNEL=512
+INPUT_CHANNEL=1024
+NUM_CLASSES=157
+BATCH_SIZE=16
+LEARNING_RATE=0.001
+WEIGHT_DECAY=1e-4
+NUM_WORKERS=4
+MAX_EPOCHS=100
+GPUS=2
+PRECISION=32
+
+# Data paths
+DATA_ROOT="/data/1_personal/4_SWWOO/actiondetect/PDAN/data"
+TRAIN_SPLIT="/data/1_personal/4_SWWOO/actiondetect/PDAN/data/charades.json"
+VAL_SPLIT="/data/1_personal/4_SWWOO/actiondetect/PDAN/data/charades.json"
+
+# Logging
+EXPERIMENT_NAME="pdan_rgb_experiment_$(date +%Y%m%d_%H%M%S)"
+LOG_DIR="./lightning_logs"
+
+echo "Configuration:"
+echo "  Model: stage=$STAGE, block=$BLOCK, channels=$NUM_CHANNEL"
+echo "  Training: batch_size=$BATCH_SIZE, lr=$LEARNING_RATE, epochs=$MAX_EPOCHS"
+echo "  Data: $DATA_ROOT"
+echo "  GPUs: $GPUS, Precision: $PRECISION"
+echo "  Experiment: $EXPERIMENT_NAME"
+echo ""
+
+# Create log directory
+mkdir -p $LOG_DIR
+
+# Run training
 python train_pdan_lightning.py \
-    --mode rgb \
-    --batch_size 8 \
-    --lr 0.0001 \
-    --max_epochs 50 \
-    --num_stages 1 \
-    --num_layers 5 \
-    --num_channels 512 \
-    --optimizer adamw \
-    --scheduler cosine \
-    --gpus 1 \
-    --precision 16-mixed \
-    --project_name PDAN \
-    --exp_name rgb_basic \
-    --logger tensorboard \
-    --save_top_k 3 \
-    --early_stopping_patience 15
+    --stage $STAGE \
+    --block $BLOCK \
+    --num_channel $NUM_CHANNEL \
+    --input_channel $INPUT_CHANNEL \
+    --num_classes $NUM_CLASSES \
+    --batch_size $BATCH_SIZE \
+    --learning_rate $LEARNING_RATE \
+    --weight_decay $WEIGHT_DECAY \
+    --max_epochs $MAX_EPOCHS \
+    --num_workers $NUM_WORKERS \
+    --data_root "$DATA_ROOT" \
+    --train_split "$TRAIN_SPLIT" \
+    --val_split "$VAL_SPLIT" \
+    --gpus $GPUS \
+    --precision $PRECISION \
+    --experiment_name "$EXPERIMENT_NAME" \
+    --log_dir "$LOG_DIR"
 
-# Enhanced Flow training with multi-stage
-echo "2. Enhanced Flow Training (Multi-stage)..."
-python train_pdan_lightning.py \
-    --mode flow \
-    --batch_size 4 \
-    --lr 0.0001 \
-    --max_epochs 50 \
-    --num_stages 2 \
-    --num_layers 8 \
-    --num_channels 1024 \
-    --optimizer adamw \
-    --scheduler cosine \
-    --gpus 1 \
-    --precision 16-mixed \
-    --project_name PDAN \
-    --exp_name flow_enhanced \
-    --logger both \
-    --wandb_project pdan-flow-detection \
-    --save_top_k 5 \
-    --early_stopping_patience 20
-
-# Skeleton training
-echo "3. Skeleton Training..."
-python train_pdan_lightning.py \
-    --mode skeleton \
-    --batch_size 8 \
-    --lr 0.0001 \
-    --max_epochs 50 \
-    --num_stages 1 \
-    --num_layers 5 \
-    --num_channels 512 \
-    --input_channels 256 \
-    --optimizer adamw \
-    --scheduler plateau \
-    --gpus 1 \
-    --precision 16-mixed \
-    --project_name PDAN \
-    --exp_name skeleton_basic \
-    --logger tensorboard \
-    --save_top_k 3
-
-# Multi-GPU training (if available)
-echo "4. Multi-GPU Training..."
-python train_pdan_lightning.py \
-    --mode rgb \
-    --batch_size 16 \
-    --lr 0.0002 \
-    --max_epochs 50 \
-    --num_stages 2 \
-    --num_layers 8 \
-    --num_channels 1024 \
-    --optimizer adamw \
-    --scheduler cosine \
-    --gpus 2 \
-    --strategy ddp \
-    --precision 16-mixed \
-    --project_name PDAN \
-    --exp_name rgb_multigpu \
-    --logger both \
-    --wandb_project pdan-multigpu \
-    --save_top_k 5
-
-# Fast development run (for debugging)
-echo "5. Fast Development Run..."
-python train_pdan_lightning.py \
-    --mode rgb \
-    --batch_size 2 \
-    --lr 0.0001 \
-    --max_epochs 5 \
-    --num_stages 1 \
-    --num_layers 3 \
-    --num_channels 256 \
-    --optimizer adamw \
-    --scheduler cosine \
-    --gpus 1 \
-    --precision 32 \
-    --project_name PDAN \
-    --exp_name debug \
-    --logger tensorboard \
-    --fast_dev_run true \
-    --limit_train_batches 0.1 \
-    --limit_val_batches 0.1
-
-# Testing with pretrained model
-echo "6. Testing with pretrained model..."
-python train_pdan_lightning.py \
-    --test_only true \
-    --ckpt_path ./lightning_logs/PDAN/rgb_basic/checkpoints/best.ckpt \
-    --mode rgb \
-    --batch_size 1 \
-    --project_name PDAN \
-    --exp_name test_rgb \
-    --logger tensorboard \
-    --gpus 1
-
-echo "=== Training Scripts Completed ==="
+echo ""
+echo "Training completed!"
+echo "Logs saved to: $LOG_DIR/$EXPERIMENT_NAME"
+echo "Checkpoints saved to: $LOG_DIR/checkpoints"

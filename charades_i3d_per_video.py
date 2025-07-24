@@ -22,7 +22,35 @@ def video_to_tensor(pic):
     Returns:
          Tensor: Converted video.
     """
-    return torch.from_numpy(pic.transpose([3,0,1,2]))
+    # Handle different numpy array types more robustly
+    try:
+        # Always create a new numpy array to avoid type issues
+        pic_copy = np.array(pic, dtype=np.float32, copy=True)
+        
+        # Transpose dimensions: (T, H, W, C) -> (C, T, H, W)
+        transposed = pic_copy.transpose([3, 0, 1, 2])
+        
+        # Create tensor directly without torch.from_numpy to avoid type issues
+        return torch.tensor(transposed, dtype=torch.float32)
+        
+    except Exception as e:
+        print(f"Error in video_to_tensor: {e}")
+        print(f"Input type: {type(pic)}, shape: {pic.shape if hasattr(pic, 'shape') else 'no shape'}")
+        
+        # Ultimate fallback: manual tensor creation
+        if hasattr(pic, 'shape') and len(pic.shape) == 4:
+            T, H, W, C = pic.shape
+            # Create tensor with correct shape directly
+            tensor_data = torch.zeros((C, T, H, W), dtype=torch.float32)
+            for t in range(T):
+                for h in range(H):
+                    for w in range(W):
+                        for c in range(C):
+                            tensor_data[c, t, h, w] = float(pic[t, h, w, c])
+            return tensor_data
+        else:
+            # Last resort
+            return torch.tensor(pic, dtype=torch.float32)
 
 
 def make_dataset(split_file, split, root, num_classes=157):
@@ -99,13 +127,29 @@ def mt_collate_fn(batch):
 
     new_batch = []
     for b in batch:
-        f = np.zeros((max_len, b[0].shape[1], b[0].shape[2], b[0].shape[3]), np.float32)
-        m = np.zeros((max_len), np.float32)
-        l = np.zeros((max_len, b[1].shape[1]), np.float32)
+        # Create padded arrays with explicit numpy array creation
+        f = np.zeros((max_len, b[0].shape[1], b[0].shape[2], b[0].shape[3]), dtype=np.float32)
+        m = np.zeros((max_len,), dtype=np.float32)
+        l = np.zeros((max_len, b[1].shape[1]), dtype=np.float32)
+        
+        # Fill with actual data
         f[:b[0].shape[0]] = b[0]
-        m[:b[0].shape[0]] = 1
+        m[:b[0].shape[0]] = 1.0
         l[:b[0].shape[0], :] = b[1]
-        new_batch.append([video_to_tensor(f), torch.from_numpy(m), torch.from_numpy(l), b[2]])
+        
+        # Create tensors more safely
+        try:
+            f_tensor = video_to_tensor(f)
+            m_tensor = torch.tensor(m, dtype=torch.float32)
+            l_tensor = torch.tensor(l, dtype=torch.float32)
+        except Exception as e:
+            print(f"Error in collate_fn: {e}")
+            # Fallback tensor creation
+            f_tensor = torch.tensor(f.transpose([3,0,1,2]), dtype=torch.float32)
+            m_tensor = torch.tensor(m, dtype=torch.float32)
+            l_tensor = torch.tensor(l, dtype=torch.float32)
+        
+        new_batch.append([f_tensor, m_tensor, l_tensor, b[2]])
 
     return default_collate(new_batch)
 
