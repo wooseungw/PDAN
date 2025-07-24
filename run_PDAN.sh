@@ -12,5 +12,5 @@ python train_PDAN.py \
 -comp_info charades_PDAN \
 -APtype map \
 -epoch 100 \
--batch_size 32 # -run_mode debug
+-batch_size 64 # -run_mode debug
 

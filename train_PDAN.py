@@ -4,8 +4,15 @@ import os
 import argparse
 import sys
 
+# CUDNN 에러 해결을 위한 환경 변수 설정
+os.environ['TORCH_USE_CUDA_DSA'] = '1'
+os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+
 import torchvision.models as models
 import torch
+
+# CUDNN 최적화 비활성화 (호환성 문제 해결)
+torch.backends.cudnn.enabled = False
 
 
 
@@ -69,7 +76,6 @@ torch.backends.cudnn.benchmark = False
 print('Random_SEED!!!:', SEED)
 
 from torch.optim import lr_scheduler
-from torch.autograd import Variable
 
 import json
 
@@ -90,10 +96,10 @@ if args.dataset == 'charades':
         train_split = './data/charades_test.json'
         test_split = './data/charades_test.json'
     else:
-        train_split = './data/charades.json'
-        test_split = './data/charades.json'
+        train_split = '/data/1_personal/4_SWWOO/actiondetect/PDAN/data/charades.json'
+        test_split = '/data/1_personal/4_SWWOO/actiondetect/PDAN/data/charades.json'
     # print('load feature from:', args.rgb_root)
-    rgb_root = '/Path/to/charades_feat_rgb'
+    rgb_root = '/data/1_personal/4_SWWOO/actiondetect/PDAN/data'  # 절대 경로 사용
     skeleton_root = '/Path/to/charades_feat_pose'
     flow_root = '/Path/to/charades_feat_flow'
     rgb_of=[rgb_root,flow_root]
@@ -158,17 +164,16 @@ def eval_model(model, dataloader, baseline=False):
 
 def run_network(model, data, gpu, epoch=0, baseline=False):
     inputs, mask, labels, other = data
-    # wrap them in Variable
-    inputs = Variable(inputs.cuda(gpu))
-    mask = Variable(mask.cuda(gpu))
-    labels = Variable(labels.cuda(gpu))
+    # Move to GPU without Variable wrapper
+    inputs = inputs.cuda(gpu)
+    mask = mask.cuda(gpu)
+    labels = labels.cuda(gpu)
 
     mask_list = torch.sum(mask, 1)
     mask_new = np.zeros((mask.size()[0], classes, mask.size()[1]))
     for i in range(mask.size()[0]):
         mask_new[i, :, :int(mask_list[i])] = np.ones((classes, int(mask_list[i])))
-    mask_new = torch.from_numpy(mask_new).float()
-    mask_new = Variable(mask_new.cuda(gpu))
+    mask_new = torch.from_numpy(mask_new).float().cuda(gpu)
 
     inputs = inputs.squeeze(3).squeeze(3)
     #print("inputs",inputs.size())
@@ -182,7 +187,7 @@ def run_network(model, data, gpu, epoch=0, baseline=False):
     #print("outputs_final",outputs_final.size())
     outputs_final = outputs_final.permute(0, 2, 1)  
     probs_f = F.sigmoid(outputs_final) * mask.unsqueeze(2)
-    loss_f = F.binary_cross_entropy_with_logits(outputs_final, labels, size_average=False)
+    loss_f = F.binary_cross_entropy_with_logits(outputs_final, labels, reduction='sum')
     loss_f = torch.sum(loss_f) / torch.sum(mask)  
 
     loss = loss_f 
@@ -221,7 +226,6 @@ def train_step(model, gpu, optimizer, dataloader, epoch):
 
     return train_map, epoch_loss
 
-
 def val_step(model, gpu, dataloader, epoch):
     model.train(False)
     apm = APMeter()
@@ -253,7 +257,7 @@ def val_step(model, gpu, dataloader, epoch):
 
     val_map = torch.sum(100 * apm.value()) / torch.nonzero(100 * apm.value()).size()[0]
     print('val-map:', val_map)
-    print(100 * apm.value())
+    # print(100 * apm.value())
     apm.reset()
 
     return full_probs, epoch_loss, val_map
@@ -282,7 +286,11 @@ if __name__ == '__main__':
             input_channnel = 1024
 
         num_classes = classes
-        mid_channel=int(args.num_channel)
+        # Handle num_channel argument - use default value if not properly set
+        if args.num_channel == 'False' or args.num_channel is None:
+            mid_channel = 512  # Default value
+        else:
+            mid_channel = int(args.num_channel)
 
         if args.model=="PDAN":
             print("you are processing PDAN_original")
@@ -312,11 +320,11 @@ if __name__ == '__main__':
         print('num_channel:', num_channel, 'input_channnel:', input_channnel,'num_classes:', num_classes)
         rgb_model.cuda()
 
-        criterion = nn.NLLLoss(reduce=False)
+        criterion = nn.NLLLoss(reduction='none')
         lr = float(args.lr)
         print(lr)
         optimizer = optim.Adam(rgb_model.parameters(), lr=lr)
-        lr_sched = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=8, verbose=True)
+        lr_sched = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=8)
         run([(rgb_model, 0, dataloaders, optimizer, lr_sched, args.comp_info)], criterion, num_epochs=int(args.epoch))
 
 
