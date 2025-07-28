@@ -13,9 +13,9 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
-from pytorch_lightning.loggers import TensorBoardLogger
+import lightning as L
+from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor
+from lightning.pytorch.loggers import TensorBoardLogger
 import numpy as np
 
 # Add current directory to path for imports
@@ -27,7 +27,7 @@ from charades_i3d_per_video import MultiThumos as Dataset
 from charades_i3d_per_video import mt_collate_fn as collate_fn
 
 
-class PDANLightningModule(pl.LightningModule):
+class PDANLightningModule(L.LightningModule):
     """PyTorch Lightning Module for PDAN model"""
     
     def __init__(self, 
@@ -36,7 +36,7 @@ class PDANLightningModule(pl.LightningModule):
                  num_channel=512, 
                  input_channel=1024, 
                  num_classes=157,
-                 learning_rate=0.001,
+                 learning_rate=0.0001,
                  weight_decay=1e-4):
         super().__init__()
         
@@ -158,8 +158,8 @@ class PDANLightningModule(pl.LightningModule):
         
         # Log metrics with explicit batch size
         current_batch_size = batch[0].size(0) if hasattr(batch[0], 'size') else 1
-        self.log('train_loss', results['loss'], on_step=True, on_epoch=True, prog_bar=True, batch_size=current_batch_size)
-        self.log('train_acc', results['accuracy'], on_step=True, on_epoch=True, batch_size=current_batch_size)
+        self.log('train_loss', results['loss'], on_step=False, on_epoch=True, prog_bar=True, batch_size=current_batch_size)
+        self.log('train_acc', results['accuracy'], on_step=False, on_epoch=True, batch_size=current_batch_size)
         
         return results['loss']
     
@@ -221,7 +221,7 @@ class PDANLightningModule(pl.LightningModule):
         self.val_apm.reset()
 
 
-class PDANDataModule(pl.LightningDataModule):
+class PDANDataModule(L.LightningDataModule):
     """PyTorch Lightning Data Module for PDAN"""
     
     def __init__(self, 
@@ -331,7 +331,7 @@ def main():
     args = parser.parse_args()
     
     # Set random seeds for reproducibility
-    pl.seed_everything(42)
+    L.seed_everything(42)
     
     # Create data module
     data_module = PDANDataModule(
@@ -361,7 +361,7 @@ def main():
         monitor='val_map',
         mode='max',
         save_top_k=3,
-        save_last=True,
+        save_last=False,
         verbose=True
     )
     
@@ -374,7 +374,7 @@ def main():
     )
     
     # Create trainer
-    trainer = pl.Trainer(
+    trainer = L.Trainer(
         max_epochs=args.max_epochs,
         accelerator='gpu' if args.gpus > 0 and torch.cuda.is_available() else 'cpu',
         devices=args.gpus if args.gpus > 0 and torch.cuda.is_available() else 'auto',

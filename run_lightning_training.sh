@@ -1,20 +1,3 @@
-#!/bin/bash
-
-# P# Default configuration
-STAGE=1
-BLOCK=5
-NUM_CHANNEL=512
-INPUT_CHANNEL=1024
-NUM_CLASSES=157
-BATCH_SIZE=64  # 1에서 4로 증가
-LEARNING_RATE=0.001
-WEIGHT_DECAY=1e-4
-NUM_WORKERS=64  # 워커 수 증가
-MAX_EPOCHS=100
-GPUS=2
-PRECISION=32 Training Script
-# Usage: ./run_lightning_training.sh
-
 set -e  # Exit on any error
 
 echo "Starting PDAN Training with PyTorch Lightning..."
@@ -33,11 +16,11 @@ NUM_CHANNEL=512
 INPUT_CHANNEL=1024
 NUM_CLASSES=157
 BATCH_SIZE=64
-LEARNING_RATE=0.001
+LEARNING_RATE=1e-3
 WEIGHT_DECAY=1e-4
 NUM_WORKERS=32
-MAX_EPOCHS=100
-GPUS=2
+MAX_EPOCHS=500
+GPUS=1
 PRECISION=32
 
 # Data paths

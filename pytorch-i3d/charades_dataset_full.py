@@ -31,24 +31,32 @@ def load_rgb_frames(image_dir, vid, start, num):
   
   for i in range(start, start+num):
     img_path = os.path.join(image_dir, vid, vid+'-'+str(i).zfill(6)+'.jpg')
-    img = cv2.imread(img_path)
     
-    if img is None:
-      print(f"Warning: Could not load image {img_path}")
-      # 검은색 이미지로 대체 (224x224x3)
+    try:
+      # CV2 경고 메시지 억제
+      img = cv2.imread(img_path, cv2.IMREAD_COLOR)
+      
+      if img is None or img.size == 0:
+        # print(f"Warning: Could not load image {img_path}")
+        # 검은색 이미지로 대체 (224x224x3)
+        img = np.zeros((224, 224, 3), dtype=np.uint8)
+      else:
+        img = img[:, :, [2, 1, 0]]  # BGR to RGB
+        
+        # 이미지 크기 확인 및 리사이즈
+        w, h, c = img.shape
+        if w != target_size[0] or h != target_size[1]:
+            if w < 226 or h < 226:
+                d = 226.-min(w,h)
+                sc = 1+d/min(w,h)
+                img = cv2.resize(img, dsize=(0,0), fx=sc, fy=sc)
+            # 최종적으로 224x224로 크기 맞춤
+            img = cv2.resize(img, target_size)
+            
+    except Exception as e:
+      # 모든 예외 상황에서 검은색 이미지로 대체
+      # print(f"Error loading image {img_path}: {e}")
       img = np.zeros((224, 224, 3), dtype=np.uint8)
-    else:
-      img = img[:, :, [2, 1, 0]]  # BGR to RGB
-    
-    w,h,c = img.shape
-    # 항상 목표 크기로 리사이즈
-    if w != target_size[0] or h != target_size[1]:
-        if w < 226 or h < 226:
-            d = 226.-min(w,h)
-            sc = 1+d/min(w,h)
-            img = cv2.resize(img,dsize=(0,0),fx=sc,fy=sc)
-        # 최종적으로 224x224로 크기 맞춤
-        img = cv2.resize(img, target_size)
     
     img = (img/255.)*2 - 1
     frames.append(img)
