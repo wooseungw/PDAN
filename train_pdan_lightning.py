@@ -26,7 +26,6 @@ from apmeter import APMeter
 from charades_i3d_per_video import MultiThumos as Dataset
 from charades_i3d_per_video import mt_collate_fn as collate_fn
 
-
 class PDANLightningModule(L.LightningModule):
     """PyTorch Lightning Module for PDAN model"""
     
@@ -69,7 +68,7 @@ class PDANLightningModule(L.LightningModule):
     
     def configure_optimizers(self):
         """Configure optimizer and learning rate scheduler"""
-        optimizer = torch.optim.Adam(
+        optimizer = torch.optim.AdamW(
             self.parameters(), 
             lr=self.learning_rate,
             weight_decay=self.weight_decay

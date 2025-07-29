@@ -3,6 +3,8 @@ set -e  # Exit on any error
 echo "Starting PDAN Training with PyTorch Lightning..."
 
 # Set CUDA environment variables for compatibility
+export CUDA_VISIBLE_DEVICES=0
+
 export TORCH_USE_CUDA_DSA=1
 export CUDA_LAUNCH_BLOCKING=1
 
@@ -25,8 +27,8 @@ PRECISION=32
 
 # Data paths
 DATA_ROOT="/data/1_personal/4_SWWOO/actiondetect/PDAN/data"
-TRAIN_SPLIT="/data/1_personal/4_SWWOO/actiondetect/PDAN/data/charades.json"
-VAL_SPLIT="/data/1_personal/4_SWWOO/actiondetect/PDAN/data/charades.json"
+TRAIN_SPLIT="/data/1_personal/4_SWWOO/actiondetect/PDAN/charades.json"
+VAL_SPLIT="/data/1_personal/4_SWWOO/actiondetect/PDAN/charades.json"
 
 # Logging
 EXPERIMENT_NAME="pdan_rgb_experiment_$(date +%Y%m%d_%H%M%S)"

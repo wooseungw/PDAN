@@ -5,10 +5,10 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-mode', type=str, help='rgb or flow', default='rgb')
-parser.add_argument('-load_model', type=str, default='PDAN/pytorch-i3d/models/rgb_charades.pt', help='path to the model to load')
+parser.add_argument('-load_model', type=str, default='pytorch-i3d/models/original/rgb_charades.pt', help='path to the model to load')
 parser.add_argument('-root', type=str, default='Charades_v1_rgb', help='root directory of the dataset')
 parser.add_argument('-gpu', type=str, default='0',)
-parser.add_argument('-save_dir', type=str, default='PDAN/data', help='directory to save extracted features')
+parser.add_argument('-save_dir', type=str, default='data', help='directory to save extracted features')
 
 args = parser.parse_args()
 os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
@@ -24,6 +24,7 @@ import torchvision
 from torchvision import datasets, transforms
 import videotransforms
 
+from tqdm import tqdm
 
 import numpy as np
 
@@ -32,7 +33,7 @@ from pytorch_i3d import InceptionI3d
 from charades_dataset_full import Charades as Dataset
 
 
-def run(max_steps=64e3, mode='rgb', root='Charades_v1_rgb', split='PDAN/data/charades.json', batch_size=1, load_model='', save_dir=''):
+def run(max_steps=64e3, mode='rgb', root='Charades_v1_rgb', split='data/charades.json', batch_size=1, load_model='', save_dir=''):
     # save_dir 검증 및 생성
     if not save_dir:
         save_dir = './extracted_features'
@@ -69,7 +70,7 @@ def run(max_steps=64e3, mode='rgb', root='Charades_v1_rgb', split='PDAN/data/cha
         tot_cls_loss = 0.0
                     
         # Iterate over data.
-        for data in dataloaders[phase]:
+        for data in tqdm(dataloaders[phase]):
             # get the inputs
             inputs, labels, name = data
             if os.path.exists(os.path.join(save_dir, name[0]+'.npy')):
