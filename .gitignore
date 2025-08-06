@@ -4,3 +4,4 @@ __pycache__/
 data/
 Charades_v1_rgb/
 lightning_logs/
+pdan_original_25.33.ckpt

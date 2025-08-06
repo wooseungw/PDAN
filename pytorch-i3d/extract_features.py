@@ -33,7 +33,7 @@ from pytorch_i3d import InceptionI3d
 from charades_dataset_full import Charades as Dataset
 
 
-def run(max_steps=64e3, mode='rgb', root='Charades_v1_rgb', split='data/charades.json', batch_size=1, load_model='', save_dir=''):
+def run(max_steps=64e3, mode='rgb', root='Charades_v1_rgb', split='charades.json', batch_size=1, load_model='', save_dir=''):
     # save_dir 검증 및 생성
     if not save_dir:
         save_dir = './extracted_features'
@@ -62,7 +62,7 @@ def run(max_steps=64e3, mode='rgb', root='Charades_v1_rgb', split='data/charades
     i3d.load_state_dict(torch.load(load_model))
     i3d.cuda()
 
-    for phase in ['train', 'val']:
+    for phase in ['val']:
         i3d.train(False)  # Set model to evaluate mode
                 
         tot_loss = 0.0
